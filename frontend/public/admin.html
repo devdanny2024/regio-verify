@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>REGIO Admin</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      background: #f4f4f4;
+      color: #333;
+      margin: 0;
+      padding: 24px;
+    }
+    h1 { font-size: 20px; font-weight: normal; margin-bottom: 4px; }
+    h1 span { color: #90ab4c; font-weight: bold; }
+    .subtitle { font-size: 12px; color: #999; margin-bottom: 24px; }
+
+    section { background: #fff; border: 1px solid #ddd; padding: 24px; margin-bottom: 24px; }
+    h2 { font-size: 15px; margin: 0 0 4px; color: #4d603a; text-transform: uppercase; letter-spacing: .05em; }
+    .step-desc { font-size: 12px; color: #888; margin: 0 0 16px; }
+
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .grid.thirds { grid-template-columns: 1fr 1fr 1fr; }
+    label { display: block; font-size: 13px; color: #666; margin-bottom: 4px; }
+    input, select {
+      width: 100%; padding: 9px 10px;
+      border: 1px solid #ddd; font-size: 13px;
+      outline: none;
+    }
+    input:focus, select:focus { border-color: #90ab4c; }
+    .full { grid-column: 1 / -1; }
+
+    .btn {
+      background: #90ab4c; color: #fff; border: none;
+      padding: 10px 20px; font-size: 14px; font-weight: bold;
+      cursor: pointer;
+    }
+    .btn:hover { background: #7d9642; }
+    .btn.sm { padding: 5px 10px; font-size: 12px; }
+    .btn.danger { background: #ba3f35; }
+    .btn.danger:hover { background: #9e342b; }
+    .btn.grey { background: #888; }
+    .btn.grey:hover { background: #666; }
+
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid #eee; }
+    th { background: #f8f8f8; font-weight: bold; color: #555; }
+    tr:last-child td { border-bottom: none; }
+
+    .badge {
+      display: inline-block; padding: 2px 8px;
+      border-radius: 3px; font-size: 11px; font-weight: bold; text-transform: uppercase;
+    }
+    .badge.pending  { background: #fff3cd; color: #856404; }
+    .badge.verified { background: #d4edda; color: #155724; }
+    .badge.rejected { background: #f8d7da; color: #721c24; }
+    .badge.missed   { background: #e2e3e5; color: #383d41; }
+
+    .link-box {
+      display: flex; gap: 8px; align-items: center; margin-top: 16px;
+      padding: 10px 12px; background: #f9f9f9; border: 1px solid #ddd;
+    }
+    .link-box input { flex: 1; border: none; background: transparent; font-size: 13px; }
+    .link-box input:focus { outline: none; }
+
+    #flash {
+      padding: 10px 14px; margin-bottom: 16px;
+      font-size: 13px; display: none;
+    }
+    #flash.ok  { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+    #flash.err { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+  </style>
+</head>
+<body>
+
+<h1><span>REGIO</span> — Verifizierungsverwaltung</h1>
+<p class="subtitle">Local Exchange Trading Platform</p>
+
+<div id="flash"></div>
+
+<!-- ── SCHRITT 1: Generate schedule link ─────────────── -->
+<section>
+  <h2>Schritt 1 — Verfügbarkeits-Link versenden</h2>
+  <p class="step-desc">Trage die Mitglieds-ID ein und kopiere den Link. Sende diesen Link dem Mitglied, damit es seine verfügbaren Zeitfenster einreichen kann.</p>
+  <div class="grid">
+    <div>
+      <label>Mitglieds-ID (aus dem REGIO-System) *</label>
+      <input type="text" id="sched-user-id" placeholder="z. B. user-12345" oninput="updateScheduleLink()">
+    </div>
+    <div>
+      <label>E-Mail (optional — wird im Formular vorausgefüllt)</label>
+      <input type="email" id="sched-email" placeholder="mitglied@example.com" oninput="updateScheduleLink()">
+    </div>
+    <div>
+      <label>Sprache</label>
+      <select id="sched-lang" onchange="updateScheduleLink()">
+        <option value="de">Deutsch</option>
+        <option value="en">English</option>
+        <option value="hu">Magyar</option>
+      </select>
+    </div>
+  </div>
+  <div id="sched-link-box" class="link-box" style="display:none; margin-top:12px">
+    <input type="text" id="sched-link-input" readonly>
+    <button class="btn sm" onclick="copySchedLink()">Kopieren</button>
+  </div>
+</section>
+
+<!-- ── SCHRITT 2: Create appointment ─────────────────── -->
+<section>
+  <h2>Schritt 2 — Termin anlegen</h2>
+  <p class="step-desc">Nachdem das Mitglied seine Verfügbarkeit eingereicht hat (du erhältst eine E-Mail), lege hier den Videocall-Termin an.</p>
+  <form id="create-form">
+    <div class="grid">
+      <div>
+        <label>Mitglied (Name) *</label>
+        <input type="text" name="member_name" required placeholder="Max Mustermann">
+      </div>
+      <div>
+        <label>E-Mail</label>
+        <input type="email" name="member_email" placeholder="max@example.com">
+      </div>
+      <div>
+        <label>Gesprächspartner (REGIO-Seite)</label>
+        <input type="text" name="partner_name" placeholder="Messemer Markus">
+      </div>
+      <div>
+        <label>Termin *</label>
+        <input type="datetime-local" name="scheduled_at" required>
+      </div>
+      <div>
+        <label>Zeitfenster (Minuten)</label>
+        <input type="number" name="call_window_minutes" value="60" min="10" max="240">
+      </div>
+      <div>
+        <label>Sprache</label>
+        <select name="lang">
+          <option value="de">Deutsch</option>
+          <option value="en">English</option>
+          <option value="hu">Magyar</option>
+        </select>
+      </div>
+    </div>
+    <div style="margin-top:16px">
+      <button type="submit" class="btn">Termin erstellen &amp; Link generieren</button>
+    </div>
+  </form>
+
+  <div id="new-link-box" class="link-box" style="display:none">
+    <input type="text" id="new-link-input" readonly>
+    <button class="btn sm" onclick="copyLink()">Kopieren</button>
+  </div>
+</section>
+
+<!-- ── Appointment list ──────────────────────────────── -->
+<section>
+  <h2>Termine <span id="appt-count" style="font-weight:normal;color:#999"></span></h2>
+  <table id="appt-table">
+    <thead>
+      <tr>
+        <th>Mitglied</th>
+        <th>Termin</th>
+        <th>Sprache</th>
+        <th>Partner</th>
+        <th>Status</th>
+        <th>Aktionen</th>
+      </tr>
+    </thead>
+    <tbody id="appt-tbody"></tbody>
+  </table>
+</section>
+
+<script>
+  // ── Helpers ────────────────────────────────────────────
+  function flash(msg, type = 'ok') {
+    const el = document.getElementById('flash');
+    el.textContent = msg;
+    el.className = type;
+    el.style.display = 'block';
+    setTimeout(() => { el.style.display = 'none'; }, 4000);
+  }
+
+  function badge(status) {
+    return `<span class="badge ${status}">${status}</span>`;
+  }
+
+  function fmtDate(iso) {
+    return new Date(iso).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' });
+  }
+
+  function inviteLink(id, lang) {
+    return `${window.location.origin}/verify/${id}?lang=${lang}`;
+  }
+
+  // ── Schedule link generator ────────────────────────────
+  function updateScheduleLink() {
+    const userId = document.getElementById('sched-user-id').value.trim();
+    const email  = document.getElementById('sched-email').value.trim();
+    const lang   = document.getElementById('sched-lang').value;
+    const box    = document.getElementById('sched-link-box');
+    const input  = document.getElementById('sched-link-input');
+
+    if (!userId) { box.style.display = 'none'; return; }
+
+    const params = new URLSearchParams({ id: userId, lang });
+    if (email) params.set('email', email);
+    input.value = `${window.location.origin}/schedule?${params.toString()}`;
+    box.style.display = 'flex';
+  }
+
+  function copySchedLink() {
+    navigator.clipboard.writeText(document.getElementById('sched-link-input').value)
+      .then(() => flash('Verfügbarkeits-Link kopiert!'));
+  }
+
+  // ── Load & render appointments ─────────────────────────
+  async function loadAppointments() {
+    const res = await fetch('/api/admin/appointments');
+    if (res.status === 401) { window.location.reload(); return; }
+    const rows = await res.json();
+    const tbody = document.getElementById('appt-tbody');
+    document.getElementById('appt-count').textContent = `(${rows.length})`;
+    tbody.innerHTML = rows.map(a => `
+      <tr>
+        <td>
+          <strong>${esc(a.member_name)}</strong><br>
+          <span style="color:#999;font-size:12px">${esc(a.member_email ?? '')}</span>
+        </td>
+        <td>${fmtDate(a.scheduled_at)}<br><span style="color:#999;font-size:11px">${a.call_window_minutes} min Fenster</span></td>
+        <td>${a.lang.toUpperCase()}</td>
+        <td>${esc(a.partner_name)}</td>
+        <td>${badge(a.status)}</td>
+        <td style="white-space:nowrap;display:flex;gap:6px;flex-wrap:wrap">
+          <button class="btn sm grey" onclick="copyDirect('${inviteLink(a.id, a.lang)}')">Link</button>
+          <button class="btn sm" onclick="setStatus('${a.id}','verified')">✓ Verifiziert</button>
+          <button class="btn sm danger" onclick="setStatus('${a.id}','rejected')">✗ Abgelehnt</button>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  function esc(str) {
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // ── Create appointment ─────────────────────────────────
+  document.getElementById('create-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const data = Object.fromEntries(new FormData(e.target));
+    data.scheduled_at = new Date(data.scheduled_at).toISOString();
+    data.call_window_minutes = parseInt(data.call_window_minutes, 10);
+
+    const res = await fetch('/api/admin/appointments', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      flash(err.error ?? 'Fehler beim Erstellen', 'err');
+      return;
+    }
+
+    const appt = await res.json();
+    const link = appt.invite_link ?? inviteLink(appt.id, appt.lang);
+
+    document.getElementById('new-link-input').value = link;
+    document.getElementById('new-link-box').style.display = 'flex';
+    flash('Termin erstellt. Link zum Kopieren bereit.');
+    e.target.reset();
+    loadAppointments();
+  });
+
+  // ── Update status ──────────────────────────────────────
+  async function setStatus(id, status) {
+    const res = await fetch(`/api/admin/appointments/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status }),
+    });
+    if (!res.ok) { flash('Fehler beim Aktualisieren', 'err'); return; }
+    flash(`Status auf "${status}" gesetzt.`);
+    loadAppointments();
+  }
+
+  // ── Copy helpers ───────────────────────────────────────
+  function copyLink() {
+    navigator.clipboard.writeText(document.getElementById('new-link-input').value)
+      .then(() => flash('Link kopiert!'));
+  }
+
+  function copyDirect(link) {
+    navigator.clipboard.writeText(link).then(() => flash('Link kopiert!'));
+  }
+
+  // ── Boot ───────────────────────────────────────────────
+  loadAppointments();
+</script>
+</body>
+</html>

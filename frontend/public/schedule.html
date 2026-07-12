@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>REGIO – Videocall-Termin</title>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --green:      #436f4e;
+      --green-light:#e8f0eb;
+      --red:        #cf2a40;
+      --text:       #333333;
+      --bg:         #f4f4f4;
+      --white:      #ffffff;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Montserrat', sans-serif;
+      background: var(--white);
+      color: var(--text);
+      display: flex;
+      justify-content: center;
+      padding: 40px 20px;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 900px;
+      width: 100%;
+      background: var(--white);
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+      padding: 40px;
+      border-top: 8px solid var(--green);
+      align-self: flex-start;
+    }
+
+    h1 { color: var(--green); text-align: center; margin-bottom: 15px; font-size: 1.6rem; }
+
+    p.description {
+      text-align: center;
+      margin-bottom: 30px;
+      font-size: 1rem;
+      line-height: 1.7;
+      color: #555;
+    }
+
+    /* ── Calendar ──────────────────────────────── */
+    .calendar-wrapper { overflow-x: auto; }
+
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: 80px repeat(4, 1fr);
+      gap: 8px;
+      min-width: 560px;
+    }
+
+    .header-cell {
+      background: var(--green);
+      color: var(--white);
+      text-align: center;
+      padding: 12px 8px;
+      font-weight: 700;
+      border-radius: 6px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      line-height: 1.3;
+    }
+
+    .header-cell .date {
+      font-size: 0.8rem;
+      font-weight: 400;
+      margin-top: 3px;
+    }
+
+    .time-label {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg);
+      border-radius: 6px;
+      padding: 8px 4px;
+      font-size: 0.9rem;
+      font-weight: 700;
+      line-height: 1.2;
+      color: var(--text);
+    }
+
+    .time-label .end { font-size: 0.7rem; font-weight: 400; color: #888; margin-top: 2px; }
+
+    .slot {
+      background: var(--bg);
+      border: 2px solid transparent;
+      border-radius: 6px;
+      cursor: pointer;
+      min-height: 44px;
+      transition: all 0.15s ease;
+      position: relative;
+    }
+
+    .slot:hover { border-color: var(--green); background: var(--green-light); }
+
+    .slot.selected {
+      background: var(--green);
+      border-color: var(--green);
+    }
+
+    .slot.selected::after {
+      content: '✓';
+      color: var(--white);
+      font-weight: 700;
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 1.1rem;
+    }
+
+    /* ── Actions ───────────────────────────────── */
+    .actions { margin-top: 36px; text-align: center; }
+
+    .btn-submit {
+      background: var(--red);
+      color: var(--white);
+      border: none;
+      padding: 14px 40px;
+      font-size: 1.1rem;
+      font-weight: 700;
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: 'Montserrat', sans-serif;
+      box-shadow: 0 4px 10px rgba(207,42,64,0.3);
+      transition: background 0.2s, transform 0.1s;
+    }
+
+    .btn-submit:hover    { background: #a62032; transform: translateY(-2px); }
+    .btn-submit:disabled { background: #ccc; cursor: not-allowed; transform: none; box-shadow: none; }
+
+    .selection-info { margin-top: 14px; font-size: 0.9rem; color: #777; }
+
+    /* ── Success state ─────────────────────────── */
+    #success-screen {
+      display: none;
+      text-align: center;
+      padding: 40px 20px;
+    }
+
+    .checkmark {
+      width: 72px; height: 72px;
+      background: var(--green);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 24px;
+      font-size: 2rem; color: var(--white);
+    }
+
+    #success-screen h2 { color: var(--green); margin-bottom: 12px; }
+    #success-screen p  { color: #666; line-height: 1.6; }
+
+    /* ── Responsive ────────────────────────────── */
+    @media (max-width: 680px) {
+      .container { padding: 24px 16px; }
+      .calendar-grid { gap: 4px; }
+      .header-cell { padding: 8px 4px; font-size: 0.85rem; }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Scheduling form -->
+  <div id="form-screen">
+    <h1 id="t-title"></h1>
+    <p class="description" id="t-description"></p>
+
+    <div class="calendar-wrapper">
+      <div class="calendar-grid" id="calendar"></div>
+    </div>
+
+    <div class="actions">
+      <button class="btn-submit" id="submitBtn" disabled>
+        <span id="t-submit"></span>
+      </button>
+      <div class="selection-info" id="selectionInfo"></div>
+    </div>
+  </div>
+
+  <!-- Success / already submitted -->
+  <div id="success-screen">
+    <div class="checkmark">✓</div>
+    <h2 id="t-success-title"></h2>
+    <p id="t-success-body"></p>
+  </div>
+
+</div>
+
+<script>
+  // ── i18n ──────────────────────────────────────────────────
+  const i18n = {
+    de: {
+      title:       'Videocall-Termin wählen',
+      description: 'Um dein Nutzerkonto zu bestätigen, benötigen wir einen kurzen Videocall. Bitte wähle <strong>alle Zeitfenster</strong> aus, in denen du in den nächsten 4 Tagen verfügbar bist. Ein Admin sendet dir dann den passenden Meeting-Link.',
+      submit:      'Zeiten übermitteln',
+      noSlots:     'Bitte wähle mindestens ein Zeitfenster aus.',
+      selected:    (n) => `${n} Zeitfenster ausgewählt.`,
+      sending:     'Wird gesendet…',
+      successTitle:'Vielen Dank!',
+      successBody: 'Deine Verfügbarkeit wurde übermittelt. Du erhältst den Videocall-Link in Kürze per E-Mail.',
+      alreadyTitle:'Bereits übermittelt',
+      alreadyBody: 'Du hast deine Verfügbarkeit bereits eingereicht. Du erhältst deinen Meeting-Link in Kürze.',
+      weekdays:    ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'],
+    },
+    en: {
+      title:       'Choose your available times',
+      description: 'To confirm your account, we need a short video call. Please select <strong>all time slots</strong> in the next 4 days when you are available. An admin will then send you the meeting link.',
+      submit:      'Submit availability',
+      noSlots:     'Please select at least one time slot.',
+      selected:    (n) => `${n} slot${n !== 1 ? 's' : ''} selected.`,
+      sending:     'Sending…',
+      successTitle:'Thank you!',
+      successBody: 'Your availability has been submitted. You will receive the video call link by email shortly.',
+      alreadyTitle:'Already submitted',
+      alreadyBody: 'You have already submitted your availability. You will receive your meeting link shortly.',
+      weekdays:    ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+    },
+    hu: {
+      title:       'Válassz elérhető időpontokat',
+      description: 'A fiókod megerősítéséhez rövid videóhívásra van szükség. Kérjük, jelöld meg <strong>az összes időpontot</strong> az elkövetkező 4 napban, amikor elérhető vagy. Ezután egy admin elküldi neked a meeting-linket.',
+      submit:      'Időpontok elküldése',
+      noSlots:     'Kérjük, válassz legalább egy időpontot.',
+      selected:    (n) => `${n} időpont kiválasztva.`,
+      sending:     'Küldés…',
+      successTitle:'Köszönöm!',
+      successBody: 'Az elérhetőséged elküldtük. A videóhívás linkjét hamarosan e-mailben kapod meg.',
+      alreadyTitle:'Már elküldve',
+      alreadyBody: 'Már elküldted az elérhetőségedet. A meeting-linkedet hamarosan megkapod.',
+      weekdays:    ['V', 'H', 'K', 'Sze', 'Cs', 'P', 'Szo'],
+    },
+  };
+
+  // ── URL params ────────────────────────────────────────────
+  const params      = new URLSearchParams(window.location.search);
+  const userId      = params.get('id')    || '';
+  const memberEmail = params.get('email') || '';
+  const langCode    = params.get('lang')  || 'de';
+  const lang        = i18n[langCode] || i18n.de;
+
+  document.documentElement.lang = langCode;
+
+  // ── Apply static strings ──────────────────────────────────
+  document.title = `REGIO – ${lang.title}`;
+  document.getElementById('t-title').textContent       = lang.title;
+  document.getElementById('t-description').innerHTML   = lang.description;
+  document.getElementById('t-submit').textContent      = lang.submit;
+  document.getElementById('selectionInfo').textContent = lang.noSlots;
+  document.getElementById('t-success-title').textContent = lang.successTitle;
+  document.getElementById('t-success-body').textContent  = lang.successBody;
+
+  // ── Check if already submitted (localStorage guard) ───────
+  const LS_KEY = `regio_schedule_submitted_${userId}`;
+  if (userId && localStorage.getItem(LS_KEY)) {
+    showSuccess(true);
+  }
+
+  // ── Build calendar ────────────────────────────────────────
+  const calendar      = document.getElementById('calendar');
+  const submitBtn     = document.getElementById('submitBtn');
+  const selectionInfo = document.getElementById('selectionInfo');
+  const selectedSlots = new Set();
+
+  const today = new Date();
+  const days  = [];
+  for (let i = 1; i <= 4; i++) {
+    const d = new Date(today);
+    d.setDate(today.getDate() + i);
+    days.push(d);
+  }
+
+  // Empty top-left cell
+  calendar.appendChild(document.createElement('div'));
+
+  // Day headers
+  days.forEach((day) => {
+    const cell = document.createElement('div');
+    cell.className = 'header-cell';
+    cell.innerHTML = `${lang.weekdays[day.getDay()]}<span class="date">${day.getDate()}.${day.getMonth() + 1}.</span>`;
+    calendar.appendChild(cell);
+  });
+
+  // Time rows 08:00 – 19:00
+  for (let hour = 8; hour < 20; hour++) {
+    const label = document.createElement('div');
+    label.className = 'time-label';
+    label.innerHTML = `${hour}:00<span class="end">– ${hour + 1}:00</span>`;
+    calendar.appendChild(label);
+
+    days.forEach((day) => {
+      const slot    = document.createElement('div');
+      slot.className = 'slot';
+      const mm      = String(day.getMonth() + 1).padStart(2, '0');
+      const dd      = String(day.getDate()).padStart(2, '0');
+      const hh      = String(hour).padStart(2, '0');
+      const slotId  = `${day.getFullYear()}-${mm}-${dd}T${hh}:00`;
+      slot.dataset.id = slotId;
+
+      slot.addEventListener('click', () => {
+        if (selectedSlots.has(slotId)) {
+          selectedSlots.delete(slotId);
+          slot.classList.remove('selected');
+        } else {
+          selectedSlots.add(slotId);
+          slot.classList.add('selected');
+        }
+        const n = selectedSlots.size;
+        submitBtn.disabled          = n === 0;
+        selectionInfo.textContent   = n === 0 ? lang.noSlots : lang.selected(n);
+      });
+
+      calendar.appendChild(slot);
+    });
+  }
+
+  // ── Submit ────────────────────────────────────────────────
+  submitBtn.addEventListener('click', async () => {
+    submitBtn.disabled = true;
+    document.getElementById('t-submit').textContent = lang.sending;
+
+    try {
+      const res = await fetch('/api/schedule', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id:      userId,
+          member_email: memberEmail,
+          slots:        Array.from(selectedSlots).sort(),
+          lang:         langCode,
+        }),
+      });
+
+      if (!res.ok) throw new Error('server error');
+
+      if (userId) localStorage.setItem(LS_KEY, '1');
+      showSuccess(false);
+    } catch {
+      // Re-enable on error so the user can retry
+      submitBtn.disabled = false;
+      document.getElementById('t-submit').textContent = lang.submit;
+    }
+  });
+
+  // ── Show success screen ───────────────────────────────────
+  function showSuccess(alreadyDone) {
+    document.getElementById('form-screen').style.display = 'none';
+    const screen = document.getElementById('success-screen');
+    screen.style.display = 'block';
+    if (alreadyDone) {
+      document.getElementById('t-success-title').textContent = lang.alreadyTitle;
+      document.getElementById('t-success-body').textContent  = lang.alreadyBody;
+    }
+  }
+</script>
+</body>
+</html>

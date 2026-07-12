@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>REGIO - Video Call</title>
+  <style>
+    :root {
+      --regio-green:       #90ab4c;
+      --regio-green-hover: #7d9642;
+      --regio-dark-green:  #4d603a;
+      --text-dark:   #333333;
+      --text-light:  #666666;
+      --border-color:#dddddd;
+      --card-bg:     #ffffff;
+      --chat-bg:     #f9f9f9;
+      --chat-bubble-self:  #e8f0d8;
+      --chat-bubble-other: #ffffff;
+    }
+
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      color: var(--text-dark);
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      background-color: #f4f4f4;
+      background-image:
+        linear-gradient(45deg, #eeeeee 25%, transparent 25%, transparent 75%, #eeeeee 75%, #eeeeee),
+        linear-gradient(45deg, #eeeeee 25%, transparent 25%, transparent 75%, #eeeeee 75%, #eeeeee);
+      background-size: 20px 20px;
+      background-position: 0 0, 10px 10px;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+      max-width: 500px;
+      width: 100%;
+      padding: 30px;
+      text-align: center;
+      position: relative;
+    }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0; right: 20px;
+      border-left: 15px solid transparent;
+      border-right: 15px solid transparent;
+      border-top: 15px solid var(--regio-green);
+    }
+
+    h1   { font-size: 22px; margin-bottom: 10px; font-weight: normal; }
+    p.subtitle { font-size: 14px; color: var(--text-light); margin-bottom: 30px; line-height: 1.5; }
+    .countdown { font-size: 24px; font-weight: bold; margin: 15px 0; font-variant-numeric: tabular-nums; }
+
+    .btn {
+      background-color: var(--regio-green);
+      color: white;
+      border: none;
+      padding: 12px 20px;
+      font-size: 15px;
+      font-weight: bold;
+      cursor: pointer;
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      transition: background-color 0.2s;
+    }
+    .btn:hover    { background-color: var(--regio-green-hover); }
+    .btn:disabled { background-color: #cccccc; cursor: not-allowed; }
+
+    #call-interface {
+      display: none;
+      max-width: 900px;
+      width: 100%;
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+      flex-direction: column;
+    }
+
+    .call-container { display: flex; flex-direction: row; height: 500px; }
+
+    .video-section {
+      flex: 2;
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid var(--border-color);
+      background: #000;
+    }
+    .video-wrapper { flex: 1; position: relative; width: 100%; height: 100%; }
+
+    video#remote-video { width: 100%; height: 100%; object-fit: cover; }
+    video#local-video  {
+      position: absolute; bottom: 15px; right: 15px;
+      width: 120px; height: 90px;
+      object-fit: cover;
+      border: 2px solid white;
+      background: #333;
+    }
+
+    .partner-info {
+      background: var(--card-bg);
+      padding: 15px;
+      text-align: center;
+      font-weight: bold;
+      font-size: 15px;
+      border-top: 1px solid var(--border-color);
+    }
+
+    .chat-section { flex: 1; display: flex; flex-direction: column; background: var(--chat-bg); min-width: 300px; }
+    .chat-header  { padding: 15px; background: var(--regio-dark-green); color: white; font-weight: bold; font-size: 14px; }
+    .chat-messages { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+
+    .chat-bubble {
+      max-width: 80%;
+      padding: 10px 14px;
+      border-radius: 4px;
+      font-size: 13px;
+      line-height: 1.4;
+      border: 1px solid var(--border-color);
+    }
+    .chat-bubble.self  { align-self: flex-end;   background: var(--chat-bubble-self);  border-color: #cce0a8; }
+    .chat-bubble.other { align-self: flex-start;  background: var(--chat-bubble-other); }
+
+    .chat-input-area {
+      padding: 15px;
+      border-top: 1px solid var(--border-color);
+      background: var(--card-bg);
+      display: flex;
+      gap: 10px;
+    }
+    .chat-input-area input {
+      flex: 1; padding: 10px;
+      border: 1px solid var(--border-color);
+      outline: none; font-size: 13px;
+    }
+    .chat-input-area input:focus { border-color: var(--regio-green); }
+    .chat-input-area button {
+      background: var(--regio-dark-green);
+      color: white; border: none;
+      padding: 0 15px; cursor: pointer;
+      font-weight: bold;
+    }
+
+    @media (max-width: 768px) {
+      .call-container  { flex-direction: column; height: auto; }
+      .video-section   { height: 350px; border-right: none; border-bottom: 1px solid var(--border-color); }
+      .chat-section    { height: 400px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Screen 1: Waiting room -->
+  <div class="card" id="ui-card">
+    <h1 id="t-title"></h1>
+    <p class="subtitle" id="t-subtitle"></p>
+    <div style="margin-top:20px">
+      <div class="countdown" id="countdown-display">--:--</div>
+      <p id="t-message" style="font-size:13px;color:#666;margin-bottom:20px"></p>
+      <button id="btn-join" class="btn" disabled>
+        <span id="t-button"></span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Screen 2: Live call -->
+  <div id="call-interface">
+    <div class="call-container">
+      <div class="video-section">
+        <div class="video-wrapper">
+          <video id="remote-video" autoplay playsinline></video>
+          <video id="local-video"  autoplay playsinline muted></video>
+        </div>
+        <div class="partner-info">
+          <span id="t-partner-label"></span>&nbsp;<span id="partner-name"></span>
+        </div>
+      </div>
+      <div class="chat-section">
+        <div class="chat-header" id="t-chat-title"></div>
+        <div class="chat-messages" id="chat-history"></div>
+        <div class="chat-input-area">
+          <input type="text" id="chat-input-field" autocomplete="off">
+          <button id="chat-send-btn"></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/bundle.js"></script>
+</body>
+</html>
