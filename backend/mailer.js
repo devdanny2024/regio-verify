@@ -4,8 +4,9 @@ import 'dotenv/config';
 const transportConfig = {
   host: process.env.SMTP_HOST || '127.0.0.1',
   port: parseInt(process.env.SMTP_PORT || '25', 10),
-  secure: process.env.SMTP_SECURE === 'true',
-  ignoreTLS: true,
+  secure: false,
+  ignoreTLS: false,
+  tls: { rejectUnauthorized: false },
 };
 if (process.env.SMTP_USER) {
   transportConfig.auth = { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS };
@@ -28,7 +29,10 @@ export async function sendAvailabilityEmail({ userId, memberEmail, slots, lang }
     })
     .join('\n');
 
-  await transporter.sendMail({
+  const mailOptions = {
+    envelope: process.env.SMTP_ENVELOPE_FROM
+      ? { from: process.env.SMTP_ENVELOPE_FROM, to: 'team@regio.is' }
+      : undefined,
     from: process.env.SMTP_FROM || process.env.SMTP_USER,
     to: 'team@regio.is',
     subject: `Verfügbarkeit eingereicht – ${memberEmail || userId}`,
@@ -62,5 +66,6 @@ ${slots.sort().map((s) => {
 </ul>
 <p style="margin-top:20px;color:#666">Bitte wähle einen Termin aus, erstelle den Call im <strong>Admin-Panel</strong> und sende dem Mitglied den Verifizierungslink.</p>
 `,
-  });
+  };
+  await transporter.sendMail(mailOptions);
 }
