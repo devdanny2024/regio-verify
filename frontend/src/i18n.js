@@ -1,7 +1,8 @@
 export const translations = {
   de: {
     title:           'Verifizierung ausstehend',
-    subtitle:        'Willkommen! Um Vertrauen und Sicherheit zu gewährleisten, verifizieren wir jedes Mitglied kurz persönlich.',
+    why_title:       'Warum ein kurzes Video-Gespräch?',
+    why_text:        'Regio lebt vom gegenseitigen Vertrauen. Um unsere Gemeinschaft sicher zu halten, setzen wir auf ein kurzes, persönliches Kennenlernen per Video über Matrix. Dieser einfache Schritt stellt sicher, dass hinter jedem Profil ein echter Mensch steht und schützt die gesamte Gruppe vor Fake-Profilen oder Spam. Es geht dabei nicht um ein formelles Interview, sondern lediglich um einen kurzen Abgleich, damit wir alle mit einem guten und sicheren Gefühl miteinander tauschen können.',
     status_waiting:  'Dein Termin beginnt bald',
     status_active:   'Der Call ist bereit',
     status_missed:   'Termin verpasst',
@@ -16,13 +17,11 @@ export const translations = {
     btn_active:      'Call beitreten',
     btn_connecting:  'Verbinden...',
     partner_label:   'Du sprichst mit',
-    chat_title:      'Chat',
-    chat_placeholder:'Nachricht eingeben...',
-    chat_send:       'Senden',
   },
   en: {
     title:           'Verification pending',
-    subtitle:        'Welcome! To ensure trust and safety, we briefly verify every member personally.',
+    why_title:       'Why a short video call?',
+    why_text:        'Regio thrives on mutual trust. To keep our community safe, we rely on a quick, personal video introduction via Matrix. This simple step ensures that there is a real person behind every profile and protects the entire group from fake accounts or spam. This isn’t a formal interview, but just a brief check-in so that we can all feel good and secure when trading with each other.',
     status_waiting:  'Your appointment starts soon',
     status_active:   'The call is ready',
     status_missed:   'Appointment missed',
@@ -37,13 +36,11 @@ export const translations = {
     btn_active:      'Join call',
     btn_connecting:  'Connecting...',
     partner_label:   'You are talking to',
-    chat_title:      'Chat',
-    chat_placeholder:'Type a message...',
-    chat_send:       'Send',
   },
   hu: {
     title:           'Függőben lévő hitelesítés',
-    subtitle:        'Üdvözlünk! A bizalom és biztonság érdekében minden tagot személyesen hitelesítünk.',
+    why_title:       'Miért szükséges egy rövid videóhívás?',
+    why_text:        'A Regio a kölcsönös bizalmon alapul. Közösségünk biztonsága érdekében egy rövid, személyes videós ismerkedésre hagyatkozunk a Matrixon keresztül. Ez az egyszerű lépés biztosítja, hogy minden profil mögött valódi ember álljon, és megvédi az egész csoportot a hamis profiloktól és a spamtől. Ez nem egy hivatalos interjú, csupán egy rövid egyeztetés, hogy mindannyian jó és biztonságos érzéssel tudjunk cserélni egymással.',
     status_waiting:  'A megbeszélés hamarosan kezdődik',
     status_active:   'A hívás készen áll',
     status_missed:   'Elmulasztott időpont',
@@ -58,9 +55,6 @@ export const translations = {
     btn_active:      'Csatlakozás',
     btn_connecting:  'Csatlakozás...',
     partner_label:   'Beszélgetőpartner:',
-    chat_title:      'Csevegés',
-    chat_placeholder:'Üzenet írása...',
-    chat_send:       'Küldés',
   },
 };
 

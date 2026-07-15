@@ -142,7 +142,7 @@ app.post('/api/admin/appointments', adminAuth, async (req, res) => {
     const appt = await createAppointment({
       member_name,
       member_email,
-      partner_name: partner_name || process.env.MATRIX_ADMIN_USER_ID?.split(':')[0].replace('@', '') || 'REGIO Team',
+      partner_name: partner_name || process.env.ADMIN_DISPLAY_NAME || 'REGIO Team',
       scheduled_at,
       call_window_minutes: call_window_minutes || 60,
       matrix_room_id,

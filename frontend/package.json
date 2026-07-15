@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "build": "esbuild src/entry.js --bundle --outfile=public/bundle.js --platform=browser --target=es2020 --minify",
-    "watch": "esbuild src/entry.js --bundle --outfile=public/bundle.js --platform=browser --target=es2020 --watch"
+    "build": "esbuild src/entry.js --bundle --outfile=public/bundle.js --platform=browser --target=es2020 --minify --define:global=globalThis",
+    "watch": "esbuild src/entry.js --bundle --outfile=public/bundle.js --platform=browser --target=es2020 --watch --define:global=globalThis"
   },
   "dependencies": {
     "matrix-js-sdk": "^28.0.0"

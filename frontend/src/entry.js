@@ -1,5 +1,5 @@
 import { getLang } from './i18n.js';
-import { initMatrix, sendMessage, hangup } from './matrixCall.js';
+import { initMatrix, hangup, toggleMic, toggleCamera, toggleSound } from './matrixCall.js';
 
 // ── URL parsing ───────────────────────────────────────────
 const pathParts = window.location.pathname.split('/');
@@ -10,31 +10,35 @@ const lang = getLang(langCode);
 // ── DOM refs ──────────────────────────────────────────────
 const $ = (id) => document.getElementById(id);
 const el = {
-  card:          $('ui-card'),
-  callInterface: $('call-interface'),
-  title:         $('t-title'),
-  subtitle:      $('t-subtitle'),
+  errorCard:     $('error-card'),
+  errorTitle:    $('t-title'),
+  errorMessage:  $('t-message'),
+  appCard:       $('app-card'),
+  whyTitle:      $('t-why-title'),
+  whyText:       $('t-why-text'),
+  infoBlock:     $('info-block'),
   countdown:     $('countdown-display'),
-  message:       $('t-message'),
+  statusMessage: $('t-status-message'),
   joinBtn:       $('btn-join'),
   joinBtnText:   $('t-button'),
   partnerLabel:  $('t-partner-label'),
   partnerName:   $('partner-name'),
-  chatTitle:     $('t-chat-title'),
-  chatHistory:   $('chat-history'),
-  chatInput:     $('chat-input-field'),
-  chatSend:      $('chat-send-btn'),
+  callControls:  $('call-controls'),
+  btnSound:      $('btn-sound'),
+  btnCamera:     $('btn-camera'),
+  btnMic:        $('btn-mic'),
+  btnHangup:     $('btn-hangup'),
+  iconSound:     $('icon-sound'),
+  iconCamera:    $('icon-camera'),
+  iconMic:       $('icon-mic'),
 };
 
 // ── Apply static i18n ─────────────────────────────────────
 document.documentElement.lang = langCode;
-el.title.textContent         = lang.title;
-el.subtitle.textContent      = lang.subtitle;
-el.joinBtnText.textContent   = lang.btn_waiting;
-el.partnerLabel.textContent  = lang.partner_label;
-el.chatTitle.textContent     = lang.chat_title;
-el.chatInput.placeholder     = lang.chat_placeholder;
-el.chatSend.textContent      = lang.chat_send;
+el.whyTitle.textContent     = lang.why_title;
+el.whyText.textContent      = lang.why_text;
+el.joinBtnText.textContent  = lang.btn_waiting;
+el.partnerLabel.textContent = lang.partner_label;
 
 // ── State ─────────────────────────────────────────────────
 let appt = null;       // appointment data from API
@@ -44,30 +48,27 @@ let pollTimer = null;
 
 // ── Terminal error screen ─────────────────────────────────
 function showError(type) {
-  el.title.textContent    = lang[`status_${type}`] ?? lang.status_not_found;
-  el.subtitle.textContent = lang[`msg_${type}`]    ?? lang.msg_not_found;
-  el.countdown.style.display = 'none';
-  el.message.style.display   = 'none';
-  el.joinBtn.style.display    = 'none';
+  el.appCard.style.display   = 'none';
+  el.errorCard.style.display = '';
+  el.errorTitle.textContent   = lang[`status_${type}`] ?? lang.status_not_found;
+  el.errorMessage.textContent = lang[`msg_${type}`]    ?? lang.msg_not_found;
 }
 
 // ── Activate join button ──────────────────────────────────
 function showReady() {
   clearInterval(countdownTimer);
   clearInterval(pollTimer);
-  el.countdown.style.display = 'none';
-  el.title.textContent       = lang.status_active;
-  el.message.textContent     = lang.msg_active;
-  el.joinBtnText.textContent = lang.btn_active;
-  el.joinBtn.disabled        = false;
+  el.countdown.style.display   = 'none';
+  el.statusMessage.textContent = lang.msg_active;
+  el.joinBtnText.textContent   = lang.btn_active;
+  el.joinBtn.disabled          = false;
 }
 
 // ── Countdown tick ────────────────────────────────────────
 function startCountdown() {
-  el.title.textContent       = lang.status_waiting;
-  el.message.textContent     = lang.msg_waiting;
-  el.joinBtnText.textContent = lang.btn_waiting;
-  el.countdown.style.display = '';
+  el.statusMessage.textContent = lang.msg_waiting;
+  el.joinBtnText.textContent   = lang.btn_waiting;
+  el.countdown.style.display   = '';
 
   function tick() {
     const diff = new Date(appt.scheduled_at).getTime() - Date.now();
@@ -115,6 +116,14 @@ async function loadAppointment() {
   }
 }
 
+// ── End the call and return to the pre-call screen ─────────
+function endCall() {
+  hangup();
+  el.callControls.style.display = 'none';
+  el.infoBlock.style.display    = '';
+  showError('missed'); // reuse "missed" copy for a cleanly ended call
+}
+
 // ── Join call ─────────────────────────────────────────────
 el.joinBtn.addEventListener('click', async () => {
   // Re-fetch credentials if we arrived at active state via polling
@@ -134,17 +143,11 @@ el.joinBtn.addEventListener('click', async () => {
 
   try {
     await initMatrix(matrix, {
-      onMessage: ({ text }) => appendBubble(text, 'other'),
       onCallConnected: () => {
-        el.card.style.display          = 'none';
-        el.callInterface.style.display = 'flex';
+        el.infoBlock.style.display    = 'none';
+        el.callControls.style.display = 'flex';
       },
-      onCallEnded: () => {
-        hangup();
-        el.callInterface.style.display = 'none';
-        el.card.style.display          = '';
-        showError('missed'); // reuse "missed" copy for a cleanly ended call
-      },
+      onCallEnded: endCall,
     });
   } catch (err) {
     console.error('[entry] Matrix init error:', err);
@@ -153,25 +156,26 @@ el.joinBtn.addEventListener('click', async () => {
   }
 });
 
-// ── Chat ──────────────────────────────────────────────────
-function appendBubble(text, side) {
-  const div = document.createElement('div');
-  div.className = `chat-bubble ${side}`;
-  div.textContent = text;
-  el.chatHistory.appendChild(div);
-  el.chatHistory.scrollTop = el.chatHistory.scrollHeight;
-}
+// ── In-call controls ────────────────────────────────────────
+el.btnMic.addEventListener('click', () => {
+  const muted = toggleMic();
+  if (muted === null) return;
+  el.iconMic.src = muted ? '/icons/MicOff.png' : '/icons/MicOn.png';
+});
 
-async function handleSend() {
-  const text = el.chatInput.value.trim();
-  if (!text || !matrix) return;
-  el.chatInput.value = '';
-  appendBubble(text, 'self');
-  await sendMessage(matrix.room_id, text);
-}
+el.btnCamera.addEventListener('click', () => {
+  const off = toggleCamera();
+  if (off === null) return;
+  el.iconCamera.src = off ? '/icons/CamOff.png' : '/icons/CamOn.png';
+});
 
-el.chatSend.addEventListener('click', handleSend);
-el.chatInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleSend(); });
+el.btnSound.addEventListener('click', () => {
+  const off = toggleSound();
+  if (off === null) return;
+  el.iconSound.src = off ? '/icons/SoundOff.png' : '/icons/SoundOn.png';
+});
+
+el.btnHangup.addEventListener('click', endCall);
 
 // ── Boot ──────────────────────────────────────────────────
 loadAppointment();

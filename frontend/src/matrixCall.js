@@ -1,4 +1,4 @@
-import { createClient, ClientEvent, RoomEvent, CallEvent } from 'matrix-js-sdk';
+import { createClient, ClientEvent, CallEvent } from 'matrix-js-sdk';
 
 let client = null;
 let activeCall = null;
@@ -13,7 +13,7 @@ let activeCall = null;
  */
 export async function initMatrix(
   { homeserver, room_id, guest_token, guest_user_id, guest_device_id },
-  { onMessage, onCallConnected, onCallEnded }
+  { onCallConnected, onCallEnded }
 ) {
   client = createClient({
     baseUrl: homeserver,
@@ -36,15 +36,6 @@ export async function initMatrix(
         // Ignore "already in room" errors
         if (!e?.message?.includes('already')) throw e;
       }
-
-      // Listen for text messages from the admin
-      client.on(RoomEvent.Timeline, (event, room) => {
-        if (room?.roomId !== room_id) return;
-        if (event.getType() !== 'm.room.message') return;
-        if (event.getSender() === guest_user_id) return;
-        const { msgtype, body } = event.getContent();
-        if (msgtype === 'm.text') onMessage({ sender: event.getSender(), text: body });
-      });
 
       // If the admin calls first, answer immediately
       client.on(CallEvent.Incoming, (call) => {
@@ -91,14 +82,34 @@ function wireCallEvents(call, onCallConnected, onCallEnded) {
   call.on('error', (err) => console.error('[matrixCall] call error:', err));
 }
 
-export async function sendMessage(roomId, text) {
-  if (!client) return;
-  await client.sendTextMessage(roomId, text);
-}
-
 export function hangup() {
   activeCall?.hangup('user_hangup', false);
   activeCall = null;
   client?.stopClient();
   client = null;
+}
+
+// Returns the new muted state, or null if there's no active call.
+export function toggleMic() {
+  if (!activeCall) return null;
+  const next = !activeCall.isMicrophoneMuted();
+  activeCall.setMicrophoneMuted(next);
+  return next;
+}
+
+// Returns the new "camera off" state, or null if there's no active call.
+export function toggleCamera() {
+  if (!activeCall) return null;
+  const next = !activeCall.isLocalVideoMuted();
+  activeCall.setLocalVideoMuted(next);
+  return next;
+}
+
+// Mutes/unmutes what we hear locally. Not a Matrix API call — just toggles
+// the remote <video> element's muted flag. Returns the new muted state.
+export function toggleSound() {
+  const remoteVideo = document.getElementById('remote-video');
+  if (!remoteVideo) return null;
+  remoteVideo.muted = !remoteVideo.muted;
+  return remoteVideo.muted;
 }
