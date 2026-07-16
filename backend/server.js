@@ -5,7 +5,7 @@ import { fileURLToPath } from 'url';
 import 'dotenv/config';
 import { initDb, getAppointment, listAppointments, createAppointment, updateStatus, saveAvailability, setGuestCredentials } from './db.js';
 import { sendAvailabilityEmail } from './mailer.js';
-import { createVerificationRoom, registerVerifyUser, inviteToRoom } from './matrix.js';
+import { registerVerifyUser, inviteToRoom } from './matrix.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -154,14 +154,32 @@ app.post('/api/admin/appointments', adminAuth, async (req, res) => {
       return res.status(400).json({ error: 'member_name and scheduled_at are required' });
     }
 
-    const matrix_room_id = await createVerificationRoom(member_name);
+    const windowMinutes = call_window_minutes || 60;
+    const newStart = new Date(scheduled_at).getTime();
+    const newEnd = newStart + windowMinutes * 60_000;
+
+    const existing = await listAppointments();
+    const overlaps = existing.some((a) => {
+      if (a.status === 'rejected') return false;
+      const start = new Date(a.scheduled_at).getTime();
+      const end = start + a.call_window_minutes * 60_000;
+      return newStart < end && start < newEnd;
+    });
+    if (overlaps) {
+      return res.status(409).json({ error: 'Dieser Zeitraum überschneidet sich mit einem bestehenden Termin. Alle Calls teilen sich denselben Raum, daher dürfen sich Termine nicht überlappen.' });
+    }
+
+    // All verification calls share one persistent Matrix room — Markus stays
+    // permanently joined so Element rings reliably, instead of needing to
+    // accept a brand-new invite for every appointment.
+    const matrix_room_id = process.env.MATRIX_VERIFICATION_ROOM_ID;
 
     const appt = await createAppointment({
       member_name,
       member_email,
       partner_name: partner_name || process.env.ADMIN_DISPLAY_NAME || 'REGIO Team',
       scheduled_at,
-      call_window_minutes: call_window_minutes || 60,
+      call_window_minutes: windowMinutes,
       matrix_room_id,
       lang: lang || 'de',
     });
