@@ -114,6 +114,18 @@
     }
 
     .regio-logo { max-width: 160px; height: auto; margin-bottom: 10px; }
+
+    #lang-select {
+      align-self: flex-end;
+      padding: 5px 8px;
+      border: 1px solid var(--border-color);
+      border-radius: 5px;
+      font-family: inherit;
+      font-size: 12px;
+      color: var(--text-dark);
+      background: var(--card-bg);
+      cursor: pointer;
+    }
     .why-title  { font-size: 16px; font-weight: bold; color: var(--regio-dark-green); margin: 0; }
     .why-text   { font-size: 13px; color: var(--text-light); line-height: 1.5; margin: 0 0 10px; }
 
@@ -167,6 +179,11 @@
     </div>
 
     <div class="info-section">
+      <select id="lang-select">
+        <option value="de">Deutsch</option>
+        <option value="en">English</option>
+        <option value="hu">Magyar</option>
+      </select>
       <img class="regio-logo" src="/logo-regio.png" alt="REGIO">
       <h2 class="why-title" id="t-why-title"></h2>
       <p class="why-text" id="t-why-text"></p>

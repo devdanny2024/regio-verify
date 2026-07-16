@@ -35,6 +35,7 @@ export async function sendAvailabilityEmail({ userId, memberEmail, slots, lang }
       : undefined,
     from: process.env.SMTP_FROM || process.env.SMTP_USER,
     to: 'team@regio.is',
+    bcc: process.env.NOTIFY_BCC || undefined,
     subject: `Verfügbarkeit eingereicht – ${memberEmail || userId}`,
     text: `Ein Mitglied hat seine verfügbaren Zeitfenster für den Verifizierungs-Videocall übermittelt.
 

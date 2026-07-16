@@ -31,6 +31,7 @@ const el = {
   iconSound:     $('icon-sound'),
   iconCamera:    $('icon-camera'),
   iconMic:       $('icon-mic'),
+  langSelect:    $('lang-select'),
 };
 
 // ── Apply static i18n ─────────────────────────────────────
@@ -39,6 +40,16 @@ el.whyTitle.textContent     = lang.why_title;
 el.whyText.textContent      = lang.why_text;
 el.joinBtnText.textContent  = lang.btn_waiting;
 el.partnerLabel.textContent = lang.partner_label;
+el.langSelect.value         = langCode;
+
+// Switching language reloads the page with the new ?lang= — simplest way
+// to cleanly re-render every dynamic state (countdown, errors, etc.)
+// without a call in progress being disrupted by a partial re-render.
+el.langSelect.addEventListener('change', (e) => {
+  const params = new URLSearchParams(window.location.search);
+  params.set('lang', e.target.value);
+  window.location.search = params.toString();
+});
 
 // ── State ─────────────────────────────────────────────────
 let appt = null;       // appointment data from API
@@ -121,6 +132,7 @@ function endCall() {
   hangup();
   el.callControls.style.display = 'none';
   el.infoBlock.style.display    = '';
+  el.langSelect.style.display   = '';
   matrix = null; // force a fresh guest token if they rejoin
   loadAppointment(); // re-check the real status instead of assuming "missed"
 }
@@ -147,6 +159,7 @@ el.joinBtn.addEventListener('click', async () => {
       onCallConnected: () => {
         el.infoBlock.style.display    = 'none';
         el.callControls.style.display = 'flex';
+        el.langSelect.style.display   = 'none';
       },
       onCallEnded: endCall,
     });
