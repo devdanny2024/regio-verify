@@ -121,7 +121,8 @@ function endCall() {
   hangup();
   el.callControls.style.display = 'none';
   el.infoBlock.style.display    = '';
-  showError('missed'); // reuse "missed" copy for a cleanly ended call
+  matrix = null; // force a fresh guest token if they rejoin
+  loadAppointment(); // re-check the real status instead of assuming "missed"
 }
 
 // ── Join call ─────────────────────────────────────────────
