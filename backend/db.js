@@ -26,8 +26,21 @@ export async function initDb() {
       matrix_room_id      TEXT,
       lang                TEXT        NOT NULL DEFAULT 'de',
       status              TEXT        NOT NULL DEFAULT 'pending',
-      created_at          TIMESTAMPTZ DEFAULT NOW()
+      created_at          TIMESTAMPTZ DEFAULT NOW(),
+      guest_user_id       TEXT,
+      guest_access_token  TEXT,
+      guest_device_id     TEXT
     )
+  `);
+
+  await pool.query(`
+    ALTER TABLE appointments ADD COLUMN IF NOT EXISTS guest_user_id      TEXT
+  `);
+  await pool.query(`
+    ALTER TABLE appointments ADD COLUMN IF NOT EXISTS guest_access_token TEXT
+  `);
+  await pool.query(`
+    ALTER TABLE appointments ADD COLUMN IF NOT EXISTS guest_device_id    TEXT
   `);
 }
 
@@ -74,6 +87,13 @@ export async function saveAvailability({ userId, memberEmail, slots, lang }) {
 
 export async function setRoomId(id, roomId) {
   await pool.query('UPDATE appointments SET matrix_room_id = $1 WHERE id = $2', [roomId, id]);
+}
+
+export async function setGuestCredentials(id, { userId, accessToken, deviceId }) {
+  await pool.query(
+    'UPDATE appointments SET guest_user_id = $1, guest_access_token = $2, guest_device_id = $3 WHERE id = $4',
+    [userId, accessToken, deviceId, id]
+  );
 }
 
 export default pool;

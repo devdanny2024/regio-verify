@@ -3,7 +3,7 @@ import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import 'dotenv/config';
-import { initDb, getAppointment, listAppointments, createAppointment, updateStatus, saveAvailability } from './db.js';
+import { initDb, getAppointment, listAppointments, createAppointment, updateStatus, saveAvailability, setGuestCredentials } from './db.js';
 import { sendAvailabilityEmail } from './mailer.js';
 import { createVerificationRoom, registerVerifyUser, inviteToRoom } from './matrix.js';
 
@@ -98,10 +98,27 @@ app.get('/api/verify/:id', async (req, res) => {
     };
 
     // Only hand out Matrix credentials when the call window is open.
-    // Register a temporary Matrix user via UIA, then invite them into the room.
+    // Register a temporary Matrix user via UIA once per appointment and
+    // reuse it on every subsequent poll/retry — registering fresh on every
+    // request hammers Synapse's registration rate limit (M_LIMIT_EXCEEDED),
+    // which was silently breaking the call for anyone who retried.
     if (status === 'active') {
-      const member = await registerVerifyUser();
-      await inviteToRoom(appt.matrix_room_id, member.user_id);
+      let member;
+      if (appt.guest_access_token) {
+        member = {
+          user_id: appt.guest_user_id,
+          access_token: appt.guest_access_token,
+          device_id: appt.guest_device_id,
+        };
+      } else {
+        member = await registerVerifyUser();
+        await inviteToRoom(appt.matrix_room_id, member.user_id);
+        await setGuestCredentials(appt.id, {
+          userId: member.user_id,
+          accessToken: member.access_token,
+          deviceId: member.device_id,
+        });
+      }
       payload.matrix = {
         homeserver: process.env.MATRIX_HOMESERVER,
         room_id: appt.matrix_room_id,
